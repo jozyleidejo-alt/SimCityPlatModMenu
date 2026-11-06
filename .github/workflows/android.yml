@@ -58,6 +58,9 @@ jobs:
           fi
 
           chmod +x gradlew
+
+          printf '\n\ntasks.withType<JavaCompile>().configureEach { sourceCompatibility = "17"; targetCompatibility = "17" }\n' >> "$PROJECT_DIR/app/build.gradle.kts"
+
           ./gradlew assembleDebug
 
       - name: Salvar APK
