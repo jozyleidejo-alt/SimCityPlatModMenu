@@ -1,3 +1,4 @@
+
 name: Gerar APK Android
 
 on:
@@ -6,6 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Baixar projeto
         uses: actions/checkout@v4
@@ -16,17 +18,43 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
       - name: Preparar Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Extrair projeto
         run: |
+          mkdir -p source
           unzip -q SimCityPlatModMenu-GitHub.zip -d source
 
-      - name: Compilar APK
-        working-directory: source/SimCityPlatModMenu-GitHub/SimCityPlatModMenu
+      - name: Localizar projeto Android
         run: |
-          gradle wrapper --gradle-version 8.9
+          PROJECT_DIR=$(find source -type f -name gradlew -print -quit | xargs -r dirname)
+
+          if [ -z "$PROJECT_DIR" ]; then
+            PROJECT_DIR=$(find source -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit | xargs -r dirname)
+          fi
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "Projeto Android não encontrado!"
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          echo "Projeto localizado em: $PROJECT_DIR"
+
+      - name: Compilar APK
+        run: |
+          cd "$PROJECT_DIR"
+
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.9
+          fi
+
           chmod +x gradlew
           ./gradlew assembleDebug
 
@@ -34,4 +62,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SimCityPlatModMenu-APK
-          path: source/SimCityPlatModMenu-GitHub/SimCityPlatModMenu/app/build/outputs/apk/debug/app-debug.apk
+          path: '**/app/build/outputs/apk/debug/*.apk'
+          if-no-files-found: error
